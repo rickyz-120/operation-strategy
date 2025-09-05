@@ -1,0 +1,697 @@
+{% extends "base.html" %}
+
+{% block page_title %}Mapa Interativo - Otimização de Rotas{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
+<script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
+<!-- Load Google Maps API -->
+<script src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY"></script>
+{% endblock %}
+
+{% block content %}
+<div class="fade-in">
+    <!-- Enhanced Route Planning Controls -->
+    <div class="neu-card">
+        <h3 style="margin-bottom: 1.5rem; color: var(--text-primary);">Planejamento Avançado de Rota</h3>
+        <div class="route-controls">
+            <div class="control-group">
+                <label for="origin">Origem:</label>
+                <input type="text" id="origin" class="neu-input" placeholder="Digite a cidade de origem" value="Curitiba, PR">
+            </div>
+            <div class="control-group">
+                <label for="destination">Destino:</label>
+                <input type="text" id="destination" class="neu-input" placeholder="Digite a cidade de destino" value="São Paulo, SP">
+            </div>
+            <div class="control-group">
+                <label for="vehicle-select">Veículo:</label>
+                <select id="vehicle-select" class="neu-select">
+                    <option value="volvo-fh">Volvo FH - ABC-1234</option>
+                    <option value="scania-r450">Scania R450 - ABC-1235</option>
+                    <option value="mercedes-actros">Mercedes Actros - ABC-1236</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <label for="cargo-weight">Peso da Carga (kg):</label>
+                <input type="number" id="cargo-weight" class="neu-input" placeholder="15000" value="15000">
+            </div>
+            <div class="control-group">
+                <label for="optimization-type">Tipo de Otimização:</label>
+                <select id="optimization-type" class="neu-select">
+                    <option value="fastest">Mais Rápida</option>
+                    <option value="economical">Mais Econômica</option>
+                    <option value="shortest">Mais Curta</option>
+                </select>
+            </div>
+            <div class="control-group checkbox-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="avoid-tolls" class="neu-checkbox">
+                    <span class="checkmark"></span>
+                    Evitar Pedágios
+                </label>
+            </div>
+            <div class="control-buttons">
+                <button class="neu-button primary" onclick="optimizeRoute()">
+                    <i class="fas fa-route"></i> Otimizar Rota
+                </button>
+                <button class="neu-button" onclick="addWaypoint()">
+                    <i class="fas fa-map-pin"></i> Adicionar Waypoint
+                </button>
+                <button class="neu-button" onclick="removeWaypoint()">
+                    <i class="fas fa-trash"></i> Remover Waypoint
+                </button>
+                <button class="neu-button" onclick="clearMap()">
+                    <i class="fas fa-eraser"></i> Limpar Mapa
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Map and Route Alternatives Container -->
+    <div class="map-container-grid">
+        <!-- Map Container -->
+        <div class="neu-card map-card">
+            <div class="map-header">
+                <h3>Mapa Interativo</h3>
+                <div class="map-controls">
+                    <button class="neu-button small" onclick="toggleTraffic()" id="traffic-btn">
+                        <i class="fas fa-traffic-light"></i> Tráfego
+                    </button>
+                    <button class="neu-button small" onclick="toggleSatellite()" id="satellite-btn">
+                        <i class="fas fa-satellite"></i> Satélite
+                    </button>
+                    <button class="neu-button small" onclick="centerMap()">
+                        <i class="fas fa-crosshairs"></i> Centralizar
+                    </button>
+                </div>
+            </div>
+            <div id="map" style="height: 500px; border-radius: 15px; overflow: hidden;"></div>
+            
+            <!-- Live Tracking Panel -->
+            <div id="live-tracking" class="live-tracking-panel" style="display: none;">
+                <h4><i class="fas fa-satellite-dish"></i> Rastreamento em Tempo Real</h4>
+                <div class="tracking-info">
+                    <div class="tracking-metric">
+                        <span class="metric-label">Progresso:</span>
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="progress-fill"></div>
+                            <span class="progress-text" id="progress-text">0%</span>
+                        </div>
+                    </div>
+                    <div class="tracking-metrics-grid">
+                        <div class="tracking-item">
+                            <i class="fas fa-clock"></i>
+                            <span id="eta">--:--</span>
+                        </div>
+                        <div class="tracking-item">
+                            <i class="fas fa-tachometer-alt"></i>
+                            <span id="current-speed">-- km/h</span>
+                        </div>
+                        <div class="tracking-item">
+                            <i class="fas fa-gas-pump"></i>
+                            <span id="fuel-remaining">--%</span>
+                        </div>
+                        <div class="tracking-item">
+                            <i class="fas fa-user"></i>
+                            <span id="driver-status">--</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Route Alternatives Panel -->
+        <div class="neu-card alternatives-card" id="alternatives-panel" style="display: none;">
+            <h3>Alternativas de Rota</h3>
+            <div id="alternatives-list" class="alternatives-list">
+                <!-- Alternatives will be populated here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Enhanced Route Information -->
+    <div class="neu-card" id="route-info" style="display: none;">
+        <h3 style="margin-bottom: 1.5rem; color: var(--text-primary);">Informações Detalhadas da Rota</h3>
+        <div class="route-details-grid">
+            <div class="route-metric-card">
+                <i class="fas fa-road"></i>
+                <div>
+                    <span class="metric-label">Distância Total</span>
+                    <span class="metric-value" id="route-distance">-</span>
+                </div>
+            </div>
+            <div class="route-metric-card">
+                <i class="fas fa-clock"></i>
+                <div>
+                    <span class="metric-label">Tempo Estimado</span>
+                    <span class="metric-value" id="route-duration">-</span>
+                </div>
+            </div>
+            <div class="route-metric-card">
+                <i class="fas fa-gas-pump"></i>
+                <div>
+                    <span class="metric-label">Custo Combustível</span>
+                    <span class="metric-value" id="estimated-fuel">-</span>
+                </div>
+            </div>
+            <div class="route-metric-card">
+                <i class="fas fa-road"></i>
+                <div>
+                    <span class="metric-label">Custo Pedágios</span>
+                    <span class="metric-value" id="route-toll-cost">-</span>
+                </div>
+            </div>
+            <div class="route-metric-card">
+                <i class="fas fa-dollar-sign"></i>
+                <div>
+                    <span class="metric-label">Custo Total</span>
+                    <span class="metric-value total" id="route-total-cost">-</span>
+                </div>
+            </div>
+            <div class="route-metric-card">
+                <i class="fas fa-leaf"></i>
+                <div>
+                    <span class="metric-label">Consumo Estimado</span>
+                    <span class="metric-value" id="route-consumption">-</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Route Actions -->
+        <div class="route-actions">
+            <button class="neu-button primary" onclick="startTracking()">
+                <i class="fas fa-play"></i> Iniciar Rastreamento
+            </button>
+            <button class="neu-button" onclick="saveRoute()">
+                <i class="fas fa-save"></i> Salvar Rota
+            </button>
+            <button class="neu-button" onclick="shareRoute()">
+                <i class="fas fa-share"></i> Compartilhar
+            </button>
+            <button class="neu-button" onclick="exportRoute()">
+                <i class="fas fa-download"></i> Exportar
+            </button>
+        </div>
+    </div>
+
+    <!-- Active Routes -->
+    <div class="neu-card">
+        <h3 style="margin-bottom: 1.5rem; color: var(--text-primary);">Rotas Ativas</h3>
+        <div class="active-routes">
+            {% for route in routes %}
+            <div class="route-item">
+                <div class="route-header">
+                    <h4>{{ route.origin.name }} → {{ route.destination.name }}</h4>
+                    <span class="status-badge status-{{ route.status.lower().replace(' ', '-') }}">{{ route.status }}</span>
+                </div>
+                <div class="route-details">
+                    <span><i class="fas fa-road"></i> {{ route.distance }} km</span>
+                    <span><i class="fas fa-clock"></i> {{ route.estimated_time }}</span>
+                    <span><i class="fas fa-weight-hanging"></i> {{ route.cargo_weight }} kg</span>
+                    <span><i class="fas fa-dollar-sign"></i> R$ {{ "%.2f"|format(route.fuel_cost) }}</span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<style>
+.route-controls {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    align-items: end;
+}
+
+.control-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.control-group label {
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 0.9rem;
+}
+
+.route-metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+}
+
+.route-metric {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    background-color: var(--bg-primary);
+    border-radius: 15px;
+    box-shadow: var(--shadow-pressed);
+}
+
+.route-metric i {
+    font-size: 2rem;
+    color: var(--accent-primary);
+}
+
+.route-metric .metric-label {
+    display: block;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+
+.route-metric .metric-value {
+    display: block;
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.active-routes {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.route-item {
+    padding: 1.5rem;
+    background-color: var(--bg-primary);
+    border-radius: 15px;
+    box-shadow: var(--shadow-pressed);
+}
+
+.route-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.route-header h4 {
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.route-details {
+    display: flex;
+    gap: 2rem;
+    flex-wrap: wrap;
+}
+
+.route-details span {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.route-details i {
+    color: var(--accent-secondary);
+}
+
+.status-planejada {
+    background-color: var(--warning);
+    color: var(--text-primary);
+}
+
+.status-em-andamento {
+    background-color: var(--accent-primary);
+    color: white;
+}
+
+.status-concluída {
+    background-color: var(--success);
+    color: white;
+}
+
+/* Enhanced styles for advanced map functionality */
+.map-container-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+
+.map-card {
+    padding: 0;
+    overflow: hidden;
+}
+
+.map-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem;
+    background-color: var(--bg-secondary);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.map-header h3 {
+    margin: 0;
+    color: var(--text-primary);
+}
+
+.map-controls {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.checkbox-group {
+    display: flex;
+    align-items: center;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.neu-checkbox {
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 6px;
+    background-color: var(--bg-primary);
+    box-shadow: var(--shadow-pressed);
+    cursor: pointer;
+    position: relative;
+}
+
+.neu-checkbox:checked {
+    background-color: var(--accent-primary);
+    box-shadow: var(--shadow-raised);
+}
+
+.neu-checkbox:checked::after {
+    content: '✓';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.control-buttons {
+    display: flex;
+    gap: 1rem;
+    grid-column: 1 / -1;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.alternatives-card {
+    max-height: 600px;
+    overflow-y: auto;
+}
+
+.alternatives-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.alternative-item {
+    padding: 1.5rem;
+    background-color: var(--bg-primary);
+    border-radius: 15px;
+    box-shadow: var(--shadow-pressed);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+}
+
+.alternative-item:hover {
+    box-shadow: var(--shadow-raised);
+    transform: translateY(-1px);
+}
+
+.alternative-item.recommended {
+    border-color: var(--success);
+}
+
+.alternative-item.selected {
+    border-color: var(--accent-primary);
+    background-color: rgba(74, 144, 226, 0.1);
+}
+
+.alternative-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.alternative-name {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.recommended-badge {
+    padding: 0.2rem 0.6rem;
+    background-color: var(--success);
+    color: white;
+    border-radius: 10px;
+    font-size: 0.7rem;
+    font-weight: 600;
+}
+
+.alternative-metrics {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.alternative-metric {
+    display: flex;
+    justify-content: space-between;
+    color: var(--text-secondary);
+}
+
+.route-details-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.route-metric-card {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.5rem;
+    background-color: var(--bg-primary);
+    border-radius: 15px;
+    box-shadow: var(--shadow-pressed);
+}
+
+.route-metric-card i {
+    font-size: 2rem;
+    color: var(--accent-primary);
+}
+
+.route-metric-card .metric-value.total {
+    color: var(--success);
+    font-size: 1.4rem;
+}
+
+.route-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.live-tracking-panel {
+    padding: 1.5rem;
+    background-color: var(--bg-secondary);
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.live-tracking-panel h4 {
+    color: var(--text-primary);
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.tracking-info {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.progress-bar {
+    position: relative;
+    width: 100%;
+    height: 25px;
+    background-color: var(--bg-primary);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: var(--shadow-pressed);
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent-primary), var(--success));
+    border-radius: 12px;
+    transition: width 0.5s ease;
+    width: 0%;
+}
+
+.progress-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 0.9rem;
+}
+
+.tracking-metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 1rem;
+}
+
+.tracking-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.8rem;
+    background-color: var(--bg-primary);
+    border-radius: 10px;
+    box-shadow: var(--shadow-pressed);
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.tracking-item i {
+    color: var(--accent-secondary);
+}
+
+@media (max-width: 1024px) {
+    .map-container-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .alternatives-card {
+        max-height: 400px;
+    }
+}
+</style>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+let map;
+let directionsService;
+let directionsRenderer;
+
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Map page loaded successfully');
+    initMap();
+});
+
+function initMap() {
+    try {
+        // Initialize map centered on Brazil
+        map = new google.maps.Map(document.getElementById('map'), {
+            zoom: 6,
+            center: { lat: -14.2350, lng: -51.9253 }
+        });
+        
+        directionsService = new google.maps.DirectionsService();
+        directionsRenderer = new google.maps.DirectionsRenderer();
+        directionsRenderer.setMap(map);
+        
+        console.log('Map initialized successfully');
+    } catch (error) {
+        console.error('Map initialization error:', error);
+        // Fallback for when Google Maps is not available
+        document.getElementById('map').innerHTML = '<div style="padding: 2rem; text-align: center; color: var(--text-primary);">Mapa será carregado quando a API do Google Maps estiver disponível</div>';
+    }
+}
+
+function optimizeRoute() {
+    const origin = document.getElementById('origin').value;
+    const destination = document.getElementById('destination').value;
+    
+    if (!origin || !destination) {
+        alert('Por favor, preencha origem e destino');
+        return;
+    }
+    
+    console.log('Optimizing route from', origin, 'to', destination);
+    
+    // Simple route calculation
+    if (directionsService && directionsRenderer) {
+        const request = {
+            origin: origin,
+            destination: destination,
+            travelMode: google.maps.TravelMode.DRIVING
+        };
+        
+        directionsService.route(request, function(result, status) {
+            if (status === 'OK') {
+                directionsRenderer.setDirections(result);
+                updateRouteInfo(result);
+            } else {
+                console.error('Route calculation failed:', status);
+            }
+        });
+    }
+}
+
+function updateRouteInfo(result) {
+    try {
+        const route = result.routes[0];
+        const leg = route.legs[0];
+        
+        document.getElementById('route-distance').textContent = leg.distance.text;
+        document.getElementById('route-duration').textContent = leg.duration.text;
+        document.getElementById('estimated-fuel').textContent = 'R$ ' + (leg.distance.value / 1000 * 0.6).toFixed(2);
+    } catch (error) {
+        console.error('Error updating route info:', error);
+    }
+}
+
+function addWaypoint() {
+    console.log('Adding waypoint');
+}
+
+function removeWaypoint(index) {
+    console.log('Removing waypoint', index);
+}
+
+function saveRoute() {
+    console.log('Saving route');
+}
+
+function exportRoute() {
+    console.log('Exporting route');
+}
+
+function toggleTraffic() {
+    console.log('Toggling traffic layer');
+}
+
+function toggleSatellite() {
+    console.log('Toggling satellite view');
+}
+</script>
+{% endblock %}

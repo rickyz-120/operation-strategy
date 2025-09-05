@@ -1,0 +1,1356 @@
+{% extends "base.html" %}
+
+{% block page_title %}Análise de Custos{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="fade-in">
+    <!-- Cost Overview -->
+    <div class="metrics-grid">
+        <div class="metric-card">
+            <div class="metric-icon">
+                <i class="fas fa-dollar-sign"></i>
+            </div>
+            <div class="metric-value">R$ {{ "{:,.0f}".format(costs.operational_costs.fuel + costs.operational_costs.maintenance + costs.operational_costs.tolls + costs.operational_costs.insurance + costs.operational_costs.driver_salaries) }}</div>
+            <div class="metric-label">Custo Total Mensal</div>
+        </div>
+        
+        <div class="metric-card">
+            <div class="metric-icon">
+                <i class="fas fa-route"></i>
+            </div>
+            <div class="metric-value">R$ {{ "%.2f"|format(costs.cost_per_km) }}</div>
+            <div class="metric-label">Custo por KM</div>
+        </div>
+        
+        <div class="metric-card">
+            <div class="metric-icon">
+                <i class="fas fa-chart-line"></i>
+            </div>
+            <div class="metric-value">{{ costs.monthly_savings }}%</div>
+            <div class="metric-label">Economia Mensal</div>
+        </div>
+        
+        <div class="metric-card">
+            <div class="metric-icon">
+                <i class="fas fa-leaf"></i>
+            </div>
+            <div class="metric-value">{{ costs.electric_vehicle_analysis.co2_reduction }}</div>
+            <div class="metric-label">Redução CO₂ (Elétricos)</div>
+        </div>
+    </div>
+
+    <!-- Added advanced cost analysis tabs for better organization -->
+    <div class="neu-card">
+        <div class="cost-tabs">
+            <button class="tab-button active" data-tab="overview">Visão Geral</button>
+            <button class="tab-button" data-tab="detailed">Análise Detalhada</button>
+            <button class="tab-button" data-tab="predictions">Previsões</button>
+            <button class="tab-button" data-tab="optimization">Otimização</button>
+            <button class="tab-button" data-tab="electric">Veículos Elétricos</button>
+        </div>
+
+        <div id="overview-tab" class="tab-content active">
+            <!-- Cost Breakdown -->
+            <div class="cost-analysis-grid">
+                <div class="cost-breakdown-card">
+                    <h3 style="margin-bottom: 1.5rem; color: var(--text-primary);">Estrutura de Custos Operacionais</h3>
+                    <div class="cost-breakdown">
+                        <div class="cost-item">
+                            <div class="cost-info">
+                                <i class="fas fa-gas-pump"></i>
+                                <div>
+                                    <span class="cost-label">Combustível</span>
+                                    <span class="cost-percentage">46.8%</span>
+                                </div>
+                            </div>
+                            <span class="cost-value">R$ {{ "{:,.0f}".format(costs.operational_costs.fuel) }}</span>
+                        </div>
+                        
+                        <div class="cost-item">
+                            <div class="cost-info">
+                                <i class="fas fa-users"></i>
+                                <div>
+                                    <span class="cost-label">Salários Motoristas</span>
+                                    <span class="cost-percentage">28.6%</span>
+                                </div>
+                            </div>
+                            <span class="cost-value">R$ {{ "{:,.0f}".format(costs.operational_costs.driver_salaries) }}</span>
+                        </div>
+                        
+                        <div class="cost-item">
+                            <div class="cost-info">
+                                <i class="fas fa-tools"></i>
+                                <div>
+                                    <span class="cost-label">Manutenção</span>
+                                    <span class="cost-percentage">12.8%</span>
+                                </div>
+                            </div>
+                            <span class="cost-value">R$ {{ "{:,.0f}".format(costs.operational_costs.maintenance) }}</span>
+                        </div>
+                        
+                        <div class="cost-item">
+                            <div class="cost-info">
+                                <i class="fas fa-road"></i>
+                                <div>
+                                    <span class="cost-label">Pedágios</span>
+                                    <span class="cost-percentage">9.1%</span>
+                                </div>
+                            </div>
+                            <span class="cost-value">R$ {{ "{:,.0f}".format(costs.operational_costs.tolls) }}</span>
+                        </div>
+                        
+                        <div class="cost-item">
+                            <div class="cost-info">
+                                <i class="fas fa-shield-alt"></i>
+                                <div>
+                                    <span class="cost-label">Seguros</span>
+                                    <span class="cost-percentage">3.3%</span>
+                                </div>
+                            </div>
+                            <span class="cost-value">R$ {{ "{:,.0f}".format(costs.operational_costs.insurance) }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chart-card">
+                    <h3 style="margin-bottom: 1.5rem; color: var(--text-primary);">Distribuição de Custos</h3>
+                    <canvas id="costsChart" width="400" height="300"></canvas>
+                </div>
+            </div>
+
+            <!-- Efficiency Trends -->
+            <div class="chart-card">
+                <h3 style="margin-bottom: 1.5rem; color: var(--text-primary);">Tendência de Eficiência</h3>
+                <canvas id="efficiencyChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+
+        <div id="detailed-tab" class="tab-content">
+            <div class="detailed-analysis">
+                <div class="analysis-grid">
+                    <div class="analysis-card">
+                        <h4>Análise por Rota</h4>
+                        <canvas id="routeCostsChart"></canvas>
+                    </div>
+
+                    <div class="analysis-card">
+                        <h4>Custos por Veículo</h4>
+                        <canvas id="vehicleCostsChart"></canvas>
+                    </div>
+
+                    <div class="analysis-card">
+                        <h4>Análise de Combustível</h4>
+                        <div class="fuel-analysis">
+                            <div class="fuel-metric">
+                                <span class="fuel-label">Preço Médio Diesel</span>
+                                <span class="fuel-value">R$ 5,45/L</span>
+                                <span class="fuel-trend up">+2.3%</span>
+                            </div>
+                            <div class="fuel-metric">
+                                <span class="fuel-label">Consumo Médio Frota</span>
+                                <span class="fuel-value">8.7 km/L</span>
+                                <span class="fuel-trend up">+0.8%</span>
+                            </div>
+                            <div class="fuel-metric">
+                                <span class="fuel-label">Gasto Mensal</span>
+                                <span class="fuel-value">R$ 45.780</span>
+                                <span class="fuel-trend down">-3.2%</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="analysis-card">
+                        <h4>Manutenção Preventiva vs Corretiva</h4>
+                        <canvas id="maintenanceChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="predictions-tab" class="tab-content">
+            <div class="predictions-analysis">
+                <div class="prediction-cards">
+                    <div class="prediction-card">
+                        <h4>Previsão de Custos (6 meses)</h4>
+                        <canvas id="costPredictionChart"></canvas>
+                        <div class="prediction-summary">
+                            <div class="prediction-item">
+                                <span class="prediction-label">Tendência Atual</span>
+                                <span class="prediction-value increase">+5.2%</span>
+                            </div>
+                            <div class="prediction-item">
+                                <span class="prediction-label">Com Otimizações</span>
+                                <span class="prediction-value decrease">-8.5%</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="prediction-card">
+                        <h4>Previsão Preços Combustível</h4>
+                        <canvas id="fuelPredictionChart"></canvas>
+                        <div class="fuel-alerts">
+                            <div class="alert-item warning">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                <span>Aumento previsto de 3-5% no diesel nos próximos 2 meses</span>
+                            </div>
+                            <div class="alert-item info">
+                                <i class="fas fa-info-circle"></i>
+                                <span>Considere contratos de hedge para combustível</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="scenario-analysis">
+                    <h4>Análise de Cenários</h4>
+                    <div class="scenario-grid">
+                        <div class="scenario-card optimistic">
+                            <h5>Cenário Otimista</h5>
+                            <div class="scenario-metrics">
+                                <div class="scenario-metric">
+                                    <span>Redução de Custos</span>
+                                    <span class="value">-12%</span>
+                                </div>
+                                <div class="scenario-metric">
+                                    <span>Economia Mensal</span>
+                                    <span class="value">R$ 11.750</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="scenario-card realistic">
+                            <h5>Cenário Realista</h5>
+                            <div class="scenario-metrics">
+                                <div class="scenario-metric">
+                                    <span>Redução de Custos</span>
+                                    <span class="value">-7%</span>
+                                </div>
+                                <div class="scenario-metric">
+                                    <span>Economia Mensal</span>
+                                    <span class="value">R$ 6.850</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="scenario-card pessimistic">
+                            <h5>Cenário Pessimista</h5>
+                            <div class="scenario-metrics">
+                                <div class="scenario-metric">
+                                    <span>Aumento de Custos</span>
+                                    <span class="value">+3%</span>
+                                </div>
+                                <div class="scenario-metric">
+                                    <span>Custo Adicional</span>
+                                    <span class="value">R$ 2.940</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="optimization-tab" class="tab-content">
+            <!-- Cost Optimization Recommendations -->
+            <div class="optimization-analysis">
+                <h3 style="margin-bottom: 1.5rem; color: var(--text-primary);">Oportunidades de Otimização</h3>
+                <div class="optimization-grid">
+                    <div class="optimization-card high-impact">
+                        <div class="impact-indicator">Alto Impacto</div>
+                        <i class="fas fa-route"></i>
+                        <h4>Otimização de Rotas</h4>
+                        <p>Implementar algoritmos avançados pode reduzir até 15% dos custos de combustível</p>
+                        <div class="optimization-metrics">
+                            <span class="savings">Economia: R$ 6.867/mês</span>
+                            <span class="implementation">Implementação: 2-4 semanas</span>
+                            <span class="roi">ROI: 340%</span>
+                        </div>
+                        <button class="neu-button primary">Implementar</button>
+                    </div>
+                    
+                    <div class="optimization-card medium-impact">
+                        <div class="impact-indicator">Médio Impacto</div>
+                        <i class="fas fa-graduation-cap"></i>
+                        <h4>Treinamento de Motoristas</h4>
+                        <p>Educação em direção econômica pode melhorar eficiência em 8-12%</p>
+                        <div class="optimization-metrics">
+                            <span class="savings">Economia: R$ 4.578/mês</span>
+                            <span class="implementation">Implementação: 1-2 meses</span>
+                            <span class="roi">ROI: 280%</span>
+                        </div>
+                        <button class="neu-button">Planejar</button>
+                    </div>
+                    
+                    <div class="optimization-card medium-impact">
+                        <div class="impact-indicator">Médio Impacto</div>
+                        <i class="fas fa-tools"></i>
+                        <h4>Manutenção Preventiva</h4>
+                        <p>Programa estruturado reduz custos de reparo em até 25%</p>
+                        <div class="optimization-metrics">
+                            <span class="savings">Economia: R$ 3.125/mês</span>
+                            <span class="implementation">Implementação: 3-6 semanas</span>
+                            <span class="roi">ROI: 195%</span>
+                        </div>
+                        <button class="neu-button">Avaliar</button>
+                    </div>
+                    
+                    <div class="optimization-card high-impact">
+                        <div class="impact-indicator">Alto Impacto</div>
+                        <i class="fas fa-leaf"></i>
+                        <h4>Migração para Elétricos</h4>
+                        <p>Substituição gradual da frota por veículos elétricos</p>
+                        <div class="optimization-metrics">
+                            <span class="savings">Economia: R$ 16.000/mês</span>
+                            <span class="implementation">Implementação: 6-12 meses</span>
+                            <span class="roi">ROI: 185%</span>
+                        </div>
+                        <button class="neu-button primary">Analisar</button>
+                    </div>
+                </div>
+
+                <div class="cost-calculator">
+                    <h4>Calculadora de Economia</h4>
+                    <div class="calculator-form">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Distância Mensal (km)</label>
+                                <input type="number" class="neu-input" id="monthlyDistance" value="50000">
+                            </div>
+                            <div class="form-group">
+                                <label>Consumo Atual (km/L)</label>
+                                <input type="number" class="neu-input" id="currentConsumption" value="8.5" step="0.1">
+                            </div>
+                            <div class="form-group">
+                                <label>Preço Combustível (R$/L)</label>
+                                <input type="number" class="neu-input" id="fuelPrice" value="5.45" step="0.01">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Melhoria Esperada (%)</label>
+                                <input type="number" class="neu-input" id="improvement" value="10" min="0" max="50">
+                            </div>
+                            <button class="neu-button primary" onclick="calculateSavings()">Calcular Economia</button>
+                        </div>
+                    </div>
+                    <div id="calculatorResult" class="calculator-result"></div>
+                    <div id="savingsResult"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="electric-tab" class="tab-content">
+            <!-- Electric Vehicle ROI Analysis -->
+            <div class="ev-analysis">
+                <h3 style="margin-bottom: 1.5rem; color: var(--text-primary);">Análise Completa - Veículos Elétricos</h3>
+                
+                <div class="ev-roi-analysis">
+                    <div class="roi-summary">
+                        <div class="roi-item">
+                            <i class="fas fa-money-bill-wave"></i>
+                            <div>
+                                <span class="roi-label">Investimento Inicial</span>
+                                <span class="roi-value">R$ {{ "{:,.0f}".format(costs.electric_vehicle_analysis.initial_investment) }}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="roi-item">
+                            <i class="fas fa-bolt"></i>
+                            <div>
+                                <span class="roi-label">Custo Mensal Energia</span>
+                                <span class="roi-value savings">R$ {{ "{:,.0f}".format(costs.electric_vehicle_analysis.monthly_energy_cost) }}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="roi-item">
+                            <i class="fas fa-calendar-alt"></i>
+                            <div>
+                                <span class="roi-label">Payback</span>
+                                <span class="roi-value">{{ costs.electric_vehicle_analysis.payback_period }}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="roi-item">
+                            <i class="fas fa-leaf"></i>
+                            <div>
+                                <span class="roi-label">Redução CO₂</span>
+                                <span class="roi-value environmental">{{ costs.electric_vehicle_analysis.co2_reduction }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="roi-comparison">
+                        <h4>Comparação de Custos (5 anos)</h4>
+                        <canvas id="evComparisonChart"></canvas>
+                        <div class="savings-highlight">
+                            <i class="fas fa-piggy-bank"></i>
+                            <span>Economia de R$ 960.000 em 5 anos</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="ev-detailed-analysis">
+                    <div class="ev-analysis-grid">
+                        <div class="ev-card">
+                            <h4>Análise de Viabilidade</h4>
+                            <canvas id="evViabilityChart"></canvas>
+                        </div>
+                        <div class="ev-card">
+                            <h4>Cronograma de Migração</h4>
+                            <div class="migration-timeline">
+                                <div class="timeline-item">
+                                    <span class="timeline-date">Ano 1</span>
+                                    <span class="timeline-action">20% da frota (4 veículos)</span>
+                                    <span class="timeline-cost">R$ 1.800.000</span>
+                                </div>
+                                <div class="timeline-item">
+                                    <span class="timeline-date">Ano 2</span>
+                                    <span class="timeline-action">40% da frota (8 veículos)</span>
+                                    <span class="timeline-cost">R$ 1.600.000</span>
+                                </div>
+                                <div class="timeline-item">
+                                    <span class="timeline-date">Ano 3</span>
+                                    <span class="timeline-action">80% da frota (16 veículos)</span>
+                                    <span class="timeline-cost">R$ 1.400.000</span>
+                                </div>
+                                <div class="timeline-item">
+                                    <span class="timeline-date">Ano 4</span>
+                                    <span class="timeline-action">100% da frota (20 veículos)</span>
+                                    <span class="timeline-cost">R$ 800.000</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.cost-analysis-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+
+.cost-breakdown {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.cost-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    background-color: var(--bg-primary);
+    border-radius: 12px;
+    box-shadow: var(--shadow-pressed);
+}
+
+.cost-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.cost-info i {
+    font-size: 1.5rem;
+    color: var(--accent-primary);
+    width: 30px;
+}
+
+.cost-label {
+    display: block;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.cost-percentage {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.cost-value {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--accent-primary);
+}
+
+.ev-roi-analysis {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.roi-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+}
+
+.roi-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.5rem;
+    background-color: var(--bg-primary);
+    border-radius: 15px;
+    box-shadow: var(--shadow-pressed);
+}
+
+.roi-item i {
+    font-size: 2rem;
+    color: var(--accent-primary);
+}
+
+.roi-label {
+    display: block;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+
+.roi-value {
+    display: block;
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.roi-value.savings {
+    color: var(--success);
+}
+
+.roi-value.environmental {
+    color: var(--success);
+}
+
+.roi-comparison {
+    padding: 2rem;
+    background-color: var(--bg-primary);
+    border-radius: 20px;
+    box-shadow: var(--shadow-pressed);
+}
+
+.roi-comparison h4 {
+    color: var(--text-primary);
+    margin-bottom: 1.5rem;
+    text-align: center;
+}
+
+.comparison-bars {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.comparison-bar {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.bar-label {
+    min-width: 150px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.bar {
+    flex: 1;
+    height: 40px;
+    background-color: var(--bg-secondary);
+    border-radius: 20px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: var(--shadow-pressed);
+}
+
+.bar-fill {
+    height: 100%;
+    border-radius: 20px;
+    transition: width 0.8s ease;
+}
+
+.conventional .bar-fill {
+    background-color: var(--danger);
+}
+
+.electric .bar-fill {
+    background-color: var(--success);
+}
+
+.bar-value {
+    position: absolute;
+    top: 50%;
+    right: 10px;
+    transform: translateY(-50%);
+    font-weight: 600;
+    color: white;
+    font-size: 0.9rem;
+}
+
+.savings-highlight {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    padding: 1rem;
+    background-color: var(--success);
+    color: white;
+    border-radius: 15px;
+    font-weight: 600;
+    box-shadow: var(--shadow-raised);
+}
+
+.recommendations-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+}
+
+.recommendation-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1.5rem;
+    background-color: var(--bg-primary);
+    border-radius: 15px;
+    box-shadow: var(--shadow-pressed);
+}
+
+.recommendation-item i {
+    font-size: 2rem;
+    color: var(--accent-primary);
+    margin-top: 0.5rem;
+}
+
+.recommendation-item h4 {
+    color: var(--text-primary);
+    margin: 0 0 0.5rem 0;
+}
+
+.recommendation-item p {
+    color: var(--text-muted);
+    margin: 0 0 1rem 0;
+    line-height: 1.5;
+}
+
+.potential-savings {
+    display: inline-block;
+    padding: 0.3rem 0.8rem;
+    background-color: var(--success);
+    color: white;
+    border-radius: 15px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    box-shadow: var(--shadow-raised);
+}
+
+/* Added new styles for enhanced cost analysis features */
+.cost-tabs {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    border-bottom: 2px solid var(--bg-secondary);
+    overflow-x: auto;
+}
+
+.tab-button {
+    padding: 1rem 2rem;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    border-radius: 10px 10px 0 0;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+}
+
+.tab-button.active {
+    background-color: var(--accent-primary);
+    color: white;
+    box-shadow: var(--shadow-raised);
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+.cost-analysis-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+
+.cost-breakdown-card, .chart-card {
+    background-color: var(--bg-primary);
+    padding: 2rem;
+    border-radius: 20px;
+    box-shadow: var(--shadow-pressed);
+}
+
+.analysis-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+}
+
+.analysis-card {
+    background-color: var(--bg-primary);
+    padding: 2rem;
+    border-radius: 15px;
+    box-shadow: var(--shadow-pressed);
+}
+
+.analysis-card h4 {
+    color: var(--text-primary);
+    margin-bottom: 1.5rem;
+}
+
+.route-costs {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.route-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    background-color: var(--bg-secondary);
+    border-radius: 10px;
+    box-shadow: var(--shadow-pressed);
+}
+
+.route-name {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.route-metrics {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.route-metrics .metric {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+
+.total-cost {
+    font-weight: 700;
+    color: var(--accent-primary);
+}
+
+.fuel-analysis {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.fuel-metric {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    background-color: var(--bg-secondary);
+    border-radius: 10px;
+}
+
+.fuel-trend {
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 0.2rem 0.5rem;
+    border-radius: 10px;
+}
+
+.fuel-trend.up {
+    background-color: var(--success);
+    color: white;
+}
+
+.fuel-trend.down {
+    background-color: var(--danger);
+    color: white;
+}
+
+.prediction-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+
+.prediction-card {
+    background-color: var(--bg-primary);
+    padding: 2rem;
+    border-radius: 15px;
+    box-shadow: var(--shadow-pressed);
+}
+
+.prediction-summary {
+    display: flex;
+    justify-content: space-around;
+    margin-top: 1rem;
+}
+
+.prediction-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.prediction-value.increase {
+    color: var(--danger);
+}
+
+.prediction-value.decrease {
+    color: var(--success);
+}
+
+.fuel-alerts {
+    margin-top: 1rem;
+}
+
+.alert-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    margin-bottom: 0.5rem;
+    border-radius: 10px;
+}
+
+.alert-item.warning {
+    background-color: rgba(255, 193, 7, 0.1);
+    color: var(--warning);
+}
+
+.alert-item.info {
+    background-color: rgba(23, 162, 184, 0.1);
+    color: var(--info);
+}
+
+.scenario-analysis {
+    margin-top: 2rem;
+}
+
+.scenario-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+}
+
+.scenario-card {
+    padding: 2rem;
+    border-radius: 15px;
+    box-shadow: var(--shadow-pressed);
+    text-align: center;
+}
+
+.scenario-card.optimistic {
+    background: linear-gradient(135deg, rgba(76, 175, 80, 0.1), rgba(76, 175, 80, 0.05));
+    border: 2px solid var(--success);
+}
+
+.scenario-card.realistic {
+    background: linear-gradient(135deg, rgba(74, 144, 226, 0.1), rgba(74, 144, 226, 0.05));
+    border: 2px solid var(--accent-primary);
+}
+
+.scenario-card.pessimistic {
+    background: linear-gradient(135deg, rgba(244, 67, 54, 0.1), rgba(244, 67, 54, 0.05));
+    border: 2px solid var(--danger);
+}
+
+.scenario-metrics {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.scenario-metric {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.optimization-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+
+.optimization-card {
+    position: relative;
+    padding: 2rem;
+    background-color: var(--bg-primary);
+    border-radius: 15px;
+    box-shadow: var(--shadow-pressed);
+    text-align: center;
+}
+
+.impact-indicator {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    padding: 0.3rem 0.8rem;
+    border-radius: 15px;
+    font-size: 0.7rem;
+    font-weight: 600;
+}
+
+.high-impact .impact-indicator {
+    background-color: var(--success);
+    color: white;
+}
+
+.medium-impact .impact-indicator {
+    background-color: var(--warning);
+    color: var(--text-primary);
+}
+
+.optimization-card i {
+    font-size: 3rem;
+    color: var(--accent-primary);
+    margin-bottom: 1rem;
+}
+
+.optimization-metrics {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin: 1rem 0;
+    font-size: 0.9rem;
+}
+
+.optimization-metrics span {
+    padding: 0.3rem 0.8rem;
+    border-radius: 10px;
+    background-color: var(--bg-secondary);
+}
+
+.cost-calculator {
+    background-color: var(--bg-primary);
+    padding: 2rem;
+    border-radius: 15px;
+    box-shadow: var(--shadow-pressed);
+    margin-top: 2rem;
+}
+
+.calculator-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.form-row {
+    display: flex;
+    gap: 1rem;
+    align-items: end;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    flex: 1;
+}
+
+.form-group label {
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.neu-input {
+    padding: 0.8rem;
+    border: none;
+    border-radius: 10px;
+    background-color: var(--bg-secondary);
+    box-shadow: var(--shadow-pressed);
+    color: var(--text-primary);
+}
+
+.calculator-result {
+    margin-top: 1rem;
+    padding: 1.5rem;
+    background-color: var(--success);
+    color: white;
+    border-radius: 10px;
+    text-align: center;
+    font-weight: 600;
+    display: none;
+}
+
+.ev-analysis-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin-top: 2rem;
+}
+
+.ev-card {
+    background-color: var(--bg-primary);
+    padding: 2rem;
+    border-radius: 15px;
+    box-shadow: var(--shadow-pressed);
+}
+
+.migration-timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.timeline-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    background-color: var(--bg-secondary);
+    border-radius: 10px;
+    box-shadow: var(--shadow-pressed);
+}
+
+.timeline-date {
+    font-weight: 600;
+    color: var(--accent-primary);
+}
+
+.timeline-cost {
+    font-weight: 600;
+    color: var(--success);
+}
+
+@media (max-width: 768px) {
+    .cost-analysis-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .comparison-bar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.5rem;
+    }
+    
+    .bar-label {
+        min-width: auto;
+    }
+    
+    .form-row {
+        flex-direction: column;
+    }
+    
+    .ev-analysis-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .cost-tabs {
+        flex-wrap: wrap;
+    }
+}
+
+.cost-breakdown {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.cost-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    background-color: var(--bg-primary);
+    border-radius: 12px;
+    box-shadow: var(--shadow-pressed);
+}
+
+.cost-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.cost-info i {
+    font-size: 1.5rem;
+    color: var(--accent-primary);
+    width: 30px;
+}
+
+.cost-label {
+    display: block;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.cost-percentage {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.cost-value {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--accent-primary);
+}
+
+.ev-roi-analysis {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.roi-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+}
+
+.roi-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.5rem;
+    background-color: var(--bg-primary);
+    border-radius: 15px;
+    box-shadow: var(--shadow-pressed);
+}
+
+.roi-item i {
+    font-size: 2rem;
+    color: var(--accent-primary);
+}
+
+.roi-label {
+    display: block;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+
+.roi-value {
+    display: block;
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.roi-value.savings {
+    color: var(--success);
+}
+
+.roi-value.environmental {
+    color: var(--success);
+}
+
+.roi-comparison {
+    padding: 2rem;
+    background-color: var(--bg-primary);
+    border-radius: 20px;
+    box-shadow: var(--shadow-pressed);
+}
+
+.roi-comparison h4 {
+    color: var(--text-primary);
+    margin-bottom: 1.5rem;
+    text-align: center;
+}
+
+.comparison-bars {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.comparison-bar {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.bar-label {
+    min-width: 150px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.bar {
+    flex: 1;
+    height: 40px;
+    background-color: var(--bg-secondary);
+    border-radius: 20px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: var(--shadow-pressed);
+}
+
+.bar-fill {
+    height: 100%;
+    border-radius: 20px;
+    transition: width 0.8s ease;
+}
+
+.conventional .bar-fill {
+    background-color: var(--danger);
+}
+
+.electric .bar-fill {
+    background-color: var(--success);
+}
+
+.bar-value {
+    position: absolute;
+    top: 50%;
+    right: 10px;
+    transform: translateY(-50%);
+    font-weight: 600;
+    color: white;
+    font-size: 0.9rem;
+}
+
+.savings-highlight {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    padding: 1rem;
+    background-color: var(--success);
+    color: white;
+    border-radius: 15px;
+    font-weight: 600;
+    box-shadow: var(--shadow-raised);
+}
+
+.recommendations-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+}
+
+.recommendation-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1.5rem;
+    background-color: var(--bg-primary);
+    border-radius: 15px;
+    box-shadow: var(--shadow-pressed);
+}
+
+.recommendation-item i {
+    font-size: 2rem;
+    color: var(--accent-primary);
+    margin-top: 0.5rem;
+}
+
+.recommendation-item h4 {
+    color: var(--text-primary);
+    margin: 0 0 0.5rem 0;
+}
+
+.recommendation-item p {
+    color: var(--text-muted);
+    margin: 0 0 1rem 0;
+    line-height: 1.5;
+}
+
+.potential-savings {
+    display: inline-block;
+    padding: 0.3rem 0.8rem;
+    background-color: var(--success);
+    color: white;
+    border-radius: 15px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    box-shadow: var(--shadow-raised);
+}
+</style>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const costsData = {
+    operational: {
+        fuel: 15000,
+        salaries: 25000,
+        maintenance: 8000,
+        tolls: 3000,
+        insurance: 5000
+    },
+    efficiency_trends: [
+        {"month": "Jan", "efficiency": 85},
+        {"month": "Feb", "efficiency": 87},
+        {"month": "Mar", "efficiency": 89},
+        {"month": "Apr", "efficiency": 91},
+        {"month": "May", "efficiency": 88},
+        {"month": "Jun", "efficiency": 92}
+    ]
+};
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Simple chart initialization without complex data binding
+    console.log('Costs page loaded successfully');
+    
+    // Basic tab functionality
+    const tabs = document.querySelectorAll('.tab-button');
+    tabs.forEach(tab => {
+        tab.addEventListener('click', function() {
+            const target = this.dataset.tab;
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            this.classList.add('active');
+            const targetContent = document.getElementById(target + '-tab');
+            if (targetContent) {
+                targetContent.classList.add('active');
+            }
+        });
+    });
+});
+
+function calculateSavings() {
+    const distance = parseFloat(document.getElementById('monthlyDistance').value);
+    const consumption = parseFloat(document.getElementById('currentConsumption').value);
+    const fuelPrice = parseFloat(document.getElementById('fuelPrice').value);
+    const improvement = parseFloat(document.getElementById('improvement').value);
+    
+    const currentFuelCost = (distance / consumption) * fuelPrice;
+    const improvedConsumption = consumption * (1 + improvement / 100);
+    const newFuelCost = (distance / improvedConsumption) * fuelPrice;
+    const savings = currentFuelCost - newFuelCost;
+    
+    document.getElementById('savingsResult').innerHTML = `
+        <div class="savings-result">
+            <h4>Resultado da Simulação</h4>
+            <p>Custo Atual: R$ ${currentFuelCost.toFixed(2)}</p>
+            <p>Custo Otimizado: R$ ${newFuelCost.toFixed(2)}</p>
+            <p class="savings-highlight">Economia Mensal: R$ ${savings.toFixed(2)}</p>
+            <p>Economia Anual: R$ ${(savings * 12).toFixed(2)}</p>
+        </div>
+    `;
+}
+</script>
+{% endblock %}

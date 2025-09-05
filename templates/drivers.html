@@ -1,0 +1,493 @@
+{% extends "base.html" %}
+
+{% block page_title %}Gestão de Motoristas{% endblock %}
+
+{% block content %}
+<div class="fade-in">
+    <!-- Driver Statistics -->
+    <div class="metrics-grid">
+        <div class="metric-card">
+            <div class="metric-icon">
+                <i class="fas fa-users"></i>
+            </div>
+            <div class="metric-value">{{ drivers|length }}</div>
+            <div class="metric-label">Total de Motoristas</div>
+        </div>
+        
+        <div class="metric-card">
+            <div class="metric-icon">
+                <i class="fas fa-user-check"></i>
+            </div>
+            <div class="metric-value">{{ drivers|selectattr("status", "equalto", "Ativo")|list|length }}</div>
+            <div class="metric-label">Motoristas Ativos</div>
+        </div>
+        
+        <div class="metric-card">
+            <div class="metric-icon">
+                <i class="fas fa-gas-pump"></i>
+            </div>
+            <div class="metric-value">{{ "%.1f"|format((drivers|sum(attribute="avg_consumption")/drivers|length)) }}</div>
+            <div class="metric-label">Consumo Médio (km/L)</div>
+        </div>
+        
+        <div class="metric-card">
+            <div class="metric-icon">
+                <i class="fas fa-trophy"></i>
+            </div>
+            <div class="metric-value">{{ "%.0f"|format((drivers|sum(attribute="efficiency_score")/drivers|length)) }}%</div>
+            <div class="metric-label">Eficiência Média</div>
+        </div>
+    </div>
+
+    <!-- Driver Management Controls -->
+    <div class="neu-card">
+        <div class="driver-controls">
+            <h3>Controles de Gestão</h3>
+            <div class="control-buttons">
+                <button class="neu-button primary" onclick="showAddDriverModal()">
+                    <i class="fas fa-user-plus"></i> Adicionar Motorista
+                </button>
+                <button class="neu-button" onclick="generateReport()">
+                    <i class="fas fa-file-alt"></i> Gerar Relatório
+                </button>
+                <button class="neu-button" onclick="exportData()">
+                    <i class="fas fa-download"></i> Exportar Dados
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Driver Performance Analytics -->
+    <div class="neu-card">
+        <h3 style="margin-bottom: 1.5rem; color: var(--text-primary);">Análise de Performance Avançada</h3>
+        <div class="analytics-grid">
+            <div class="analytics-chart">
+                <h4>Consumo por Motorista (Últimos 30 dias)</h4>
+                <canvas id="driverConsumptionChart"></canvas>
+            </div>
+            <div class="analytics-chart">
+                <h4>Eficiência vs KM Rodados</h4>
+                <canvas id="efficiencyScatterChart"></canvas>
+            </div>
+            <div class="analytics-summary">
+                <h4>Resumo de Performance</h4>
+                <div class="performance-metrics">
+                    <div class="performance-item">
+                        <span class="metric-label">Melhor Motorista</span>
+                        <span class="metric-value">{{ best_driver.name }}</span>
+                        <span class="metric-detail">{{ best_driver.avg_consumption }} km/L</span>
+                    </div>
+                    <div class="performance-item">
+                        <span class="metric-label">Maior Economia</span>
+                        <span class="metric-value">R$ {{ "%.2f"|format(fuel_savings) }}</span>
+                        <span class="metric-detail">Este mês</span>
+                    </div>
+                    <div class="performance-item">
+                        <span class="metric-label">Meta de Eficiência</span>
+                        <span class="metric-value">{{ efficiency_target }}%</span>
+                        <span class="metric-detail">{{ drivers_meeting_target }} motoristas atingiram</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Drivers Table -->
+    <div class="neu-card">
+        <h3 style="margin-bottom: 1.5rem; color: var(--text-primary);">Lista de Motoristas</h3>
+        <div class="table-container">
+            <table class="neu-table">
+                <thead>
+                    <tr>
+                        <th>Nome</th>
+                        <th>Consumo Médio (km/L)</th>
+                        <th>KM Rodados</th>
+                        <th>Eficiência</th>
+                        <th>Penalidades</th>
+                        <th>Bonificações</th>
+                        <th>Status</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for driver in drivers %}
+                    <tr>
+                        <td>
+                            <div class="driver-info">
+                                <div class="driver-avatar">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                                <span>{{ driver.name }}</span>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="consumption-badge {% if driver.avg_consumption > 10 %}good{% elif driver.avg_consumption > 8 %}average{% else %}poor{% endif %}">
+                                {{ driver.avg_consumption }} km/L
+                            </span>
+                        </td>
+                        <td>{{ "{:,}".format(driver.km_driven) }} km</td>
+                        <td>
+                            <div class="efficiency-bar">
+                                <div class="efficiency-fill" style="width: {{ driver.efficiency_score }}%"></div>
+                                <span>{{ driver.efficiency_score }}%</span>
+                            </div>
+                        </td>
+                        <td>
+                            {% if driver.penalties > 0 %}
+                                <span class="penalty-count">{{ driver.penalties }}</span>
+                            {% else %}
+                                <span class="no-penalties">0</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if driver.bonuses > 0 %}
+                                <span class="bonus-count">{{ driver.bonuses }}</span>
+                            {% else %}
+                                <span class="no-bonuses">0</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="status-badge status-{{ driver.status.lower().replace(' ', '-') }}">
+                                {{ driver.status }}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="action-buttons">
+                                <button class="neu-button small" onclick="viewDriver('{{ driver.id }}')">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <button class="neu-button small" onclick="editDriver('{{ driver.id }}')">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Driver Education Section -->
+    <div class="neu-card">
+        <h3 style="margin-bottom: 1.5rem; color: var(--text-primary);">Conscientização e Educação</h3>
+        <div class="education-tabs">
+            <button class="tab-button active" onclick="showTab('training')">Treinamentos</button>
+            <button class="tab-button" onclick="showTab('performance')">Performance Individual</button>
+            <button class="tab-button" onclick="showTab('rewards')">Sistema de Recompensas</button>
+            <button class="tab-button" onclick="showTab('tips')">Dicas de Economia</button>
+        </div>
+        
+        <div id="training-tab" class="tab-content active">
+            <div class="training-modules">
+                <div class="module-card">
+                    <div class="module-icon">
+                        <i class="fas fa-leaf"></i>
+                    </div>
+                    <h4>Direção Econômica</h4>
+                    <p>Técnicas para reduzir consumo em até 20%</p>
+                    <div class="module-progress">
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 75%"></div>
+                        </div>
+                        <span>15/20 motoristas concluíram</span>
+                    </div>
+                    <button class="neu-button">Iniciar Módulo</button>
+                </div>
+                
+                <div class="module-card">
+                    <div class="module-icon">
+                        <i class="fas fa-route"></i>
+                    </div>
+                    <h4>Planejamento de Rotas</h4>
+                    <p>Otimização de trajetos e economia de tempo</p>
+                    <div class="module-progress">
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 60%"></div>
+                        </div>
+                        <span>12/20 motoristas concluíram</span>
+                    </div>
+                    <button class="neu-button">Iniciar Módulo</button>
+                </div>
+                
+                <div class="module-card">
+                    <div class="module-icon">
+                        <i class="fas fa-tools"></i>
+                    </div>
+                    <h4>Manutenção Preventiva</h4>
+                    <p>Cuidados básicos para melhor performance</p>
+                    <div class="module-progress">
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 40%"></div>
+                        </div>
+                        <span>8/20 motoristas concluíram</span>
+                    </div>
+                    <button class="neu-button">Iniciar Módulo</button>
+                </div>
+            </div>
+        </div>
+        
+        <div id="performance-tab" class="tab-content">
+            <div class="individual-performance">
+                <div class="driver-selector">
+                    <select class="neu-select" onchange="loadDriverPerformance(this.value)">
+                        <option value="">Selecione um motorista</option>
+                        {% for driver in drivers %}
+                        <option value="{{ driver.id }}">{{ driver.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div id="driver-performance-details" class="performance-details">
+                    <p>Selecione um motorista para ver detalhes de performance</p>
+                </div>
+            </div>
+        </div>
+        
+        <div id="rewards-tab" class="tab-content">
+            <div class="rewards-system">
+                <div class="reward-categories">
+                    <div class="reward-card">
+                        <i class="fas fa-medal"></i>
+                        <h4>Economia de Combustível</h4>
+                        <p>Bonificação de R$ 50 por cada 5% de economia acima da meta</p>
+                        <div class="reward-stats">
+                            <span>12 motoristas elegíveis</span>
+                            <span>R$ 2.400 em bonificações este mês</span>
+                        </div>
+                    </div>
+                    
+                    <div class="reward-card">
+                        <i class="fas fa-clock"></i>
+                        <h4>Pontualidade</h4>
+                        <p>R$ 30 por entrega dentro do prazo sem atrasos</p>
+                        <div class="reward-stats">
+                            <span>8 motoristas elegíveis</span>
+                            <span>R$ 960 em bonificações este mês</span>
+                        </div>
+                    </div>
+                    
+                    <div class="reward-card">
+                        <i class="fas fa-shield-alt"></i>
+                        <h4>Direção Segura</h4>
+                        <p>R$ 100 por mês sem infrações ou acidentes</p>
+                        <div class="reward-stats">
+                            <span>18 motoristas elegíveis</span>
+                            <span>R$ 1.800 em bonificações este mês</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="tips-tab" class="tab-content">
+            <div class="tips-grid">
+                <div class="tip-card">
+                    <i class="fas fa-tachometer-alt"></i>
+                    <h4>Velocidade Constante</h4>
+                    <p>Mantenha velocidade entre 80-90 km/h para máxima eficiência</p>
+                </div>
+                <div class="tip-card">
+                    <i class="fas fa-thermometer-half"></i>
+                    <h4>Aquecimento do Motor</h4>
+                    <p>Evite acelerar bruscamente nos primeiros 5 minutos</p>
+                </div>
+                <div class="tip-card">
+                    <i class="fas fa-wind"></i>
+                    <h4>Ar Condicionado</h4>
+                    <p>Use ar condicionado acima de 60 km/h, janelas abertas em baixa velocidade</p>
+                </div>
+                <div class="tip-card">
+                    <i class="fas fa-weight"></i>
+                    <h4>Peso do Veículo</h4>
+                    <p>Remova itens desnecessários - cada 50kg extras aumentam 2% o consumo</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Driver Scheduling -->
+    <div class="neu-card">
+        <h3 style="margin-bottom: 1.5rem; color: var(--text-primary);">Agendamento e Atribuições</h3>
+        <div class="scheduling-interface">
+            <div class="schedule-calendar">
+                <h4>Agenda da Semana</h4>
+                <div class="calendar-grid">
+                    <div class="calendar-header">
+                        <div>Seg</div>
+                        <div>Ter</div>
+                        <div>Qua</div>
+                        <div>Qui</div>
+                        <div>Sex</div>
+                        <div>Sáb</div>
+                        <div>Dom</div>
+                    </div>
+                    <div class="calendar-body" id="calendar-body">
+                        <!-- Calendar will be populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+            <div class="assignment-panel">
+                <h4>Atribuir Rota</h4>
+                <form class="assignment-form">
+                    <div class="form-group">
+                        <label>Motorista</label>
+                        <select class="neu-select">
+                            {% for driver in drivers %}
+                            <option value="{{ driver.id }}">{{ driver.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Rota</label>
+                        <select class="neu-select">
+                            <option>São Paulo → Rio de Janeiro</option>
+                            <option>Curitiba → Florianópolis</option>
+                            <option>Belo Horizonte → Salvador</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Data/Hora</label>
+                        <input type="datetime-local" class="neu-input">
+                    </div>
+                    <button type="submit" class="neu-button primary">Atribuir Rota</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+/* Fixed CSS syntax errors by adding proper CSS rules */
+.analytics-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 300px;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.analytics-chart {
+    background: var(--surface);
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: var(--shadow-neu);
+    height: 300px;
+}
+
+.analytics-chart canvas {
+    width: 100% !important;
+    height: 250px !important;
+}
+
+.analytics-summary {
+    background: var(--surface);
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: var(--shadow-neu);
+}
+
+.performance-metrics {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.performance-item {
+    display: flex;
+    flex-direction: column;
+    padding: 1rem;
+    background: var(--background);
+    border-radius: 8px;
+    box-shadow: var(--shadow-inset);
+}
+
+.performance-item .metric-label {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.25rem;
+}
+
+.performance-item .metric-value {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.25rem;
+}
+
+.performance-item .metric-detail {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+</style>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Drivers page loaded successfully');
+    
+    // Simple chart initialization
+    try {
+        const consumptionCtx = document.getElementById('driverConsumptionChart');
+        if (consumptionCtx) {
+            new Chart(consumptionCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['João Silva', 'Maria Santos', 'Pedro Costa', 'Ana Lima', 'Carlos Souza'],
+                    datasets: [{
+                        label: 'Consumo (km/L)',
+                        data: [9.2, 8.8, 9.5, 8.5, 9.1],
+                        backgroundColor: ['#4CAF50', '#FF9800', '#4CAF50', '#F44336', '#4CAF50'],
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                color: '#000000'
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                color: '#000000'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    } catch (error) {
+        console.error('Chart initialization error:', error);
+    }
+});
+
+// Simple function definitions
+function viewDriver(driverId) {
+    console.log('Viewing driver:', driverId);
+}
+
+function editDriver(driverId) {
+    console.log('Editing driver:', driverId);
+}
+
+function showAddDriverModal() {
+    console.log('Adding new driver');
+}
+
+function generateReport() {
+    console.log('Generating driver report');
+}
+
+function exportData() {
+    console.log('Exporting driver data');
+}
+</script>
+{% endblock %}

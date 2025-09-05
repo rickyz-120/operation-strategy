@@ -1,0 +1,1780 @@
+{% extends "base.html" %}
+
+{% block page_title %}Monitoramento Climático{% endblock %}
+
+{% block content %}
+<div class="fade-in">
+    <!-- Added comprehensive weather dashboard with tabs and real-time features -->
+    <div class="weather-tabs">
+        <button class="tab-button active" onclick="showWeatherTab('overview')">Visão Geral</button>
+        <button class="tab-button" onclick="showWeatherTab('routes')">Impacto nas Rotas</button>
+        <button class="tab-button" onclick="showWeatherTab('forecast')">Previsão Estendida</button>
+        <button class="tab-button" onclick="showWeatherTab('analytics')">Análise Histórica</button>
+        <button class="tab-button" onclick="showWeatherTab('alerts')">Central de Alertas</button>
+    </div>
+
+    <div id="overview-tab" class="tab-content active">
+        <!-- Weather Overview -->
+        <div class="weather-overview">
+            <div class="current-weather neu-card">
+                <div class="weather-header">
+                    <h3>Condições Atuais - Curitiba</h3>
+                    <div class="last-update">
+                        <i class="fas fa-sync-alt"></i>
+                        <span>Atualizado há 5 min</span>
+                    </div>
+                </div>
+                <div class="current-conditions">
+                    <div class="weather-icon">
+                        <i class="fas fa-sun"></i>
+                    </div>
+                    <div class="weather-info">
+                        <span class="temperature">22°C</span>
+                        <span class="condition">Ensolarado</span>
+                        <span class="details">Umidade: 65% | Vento: 12 km/h | Pressão: 1013 hPa</span>
+                        <div class="weather-trend">
+                            <span class="trend-indicator up">↗ +2°C nas próximas 3h</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="weather-alerts neu-card">
+                <h3>Alertas Ativos</h3>
+                <div class="alerts-counter">
+                    <div class="alert-count critical">
+                        <span class="count">2</span>
+                        <span class="label">Críticos</span>
+                    </div>
+                    <div class="alert-count warning">
+                        <span class="count">5</span>
+                        <span class="label">Atenção</span>
+                    </div>
+                    <div class="alert-count info">
+                        <span class="count">3</span>
+                        <span class="label">Informativos</span>
+                    </div>
+                </div>
+                <div class="alerts-list">
+                    <div class="alert-item critical">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <div>
+                            <span class="alert-title">Tempestade Severa - BR-116</span>
+                            <span class="alert-description">Ventos de 80+ km/h previstos entre 14h-18h</span>
+                            <span class="alert-time">Válido até 18:00</span>
+                        </div>
+                    </div>
+                    <div class="alert-item warning">
+                        <i class="fas fa-cloud-rain"></i>
+                        <div>
+                            <span class="alert-title">Chuva Forte - Região Serrana</span>
+                            <span class="alert-description">Precipitação intensa com possível alagamento</span>
+                            <span class="alert-time">Válido até 16:00</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Real-time Weather Map -->
+        <div class="neu-card">
+            <h3 style="margin-bottom: 1.5rem; color: var(--text-primary);">Mapa Meteorológico em Tempo Real</h3>
+            <div class="weather-map-container">
+                <div class="map-controls">
+                    <button class="map-layer-btn active" data-layer="precipitation">Precipitação</button>
+                    <button class="map-layer-btn" data-layer="temperature">Temperatura</button>
+                    <button class="map-layer-btn" data-layer="wind">Ventos</button>
+                    <button class="map-layer-btn" data-layer="radar">Radar</button>
+                </div>
+                <div id="weatherMap" class="weather-map">
+                    <!-- Interactive weather map would be rendered here -->
+                    <div class="map-placeholder">
+                        <i class="fas fa-map"></i>
+                        <p>Mapa Meteorológico Interativo</p>
+                        <small>Clique nas camadas acima para alternar visualizações</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cities Weather Grid -->
+        <div class="neu-card">
+            <h3 style="margin-bottom: 1.5rem; color: var(--text-primary);">Condições por Cidade</h3>
+            <div class="cities-weather-grid">
+                {% for city_weather in weather %}
+                <div class="city-weather-card">
+                    <div class="city-header">
+                        <h4>{{ city_weather.city }}</h4>
+                        <div class="weather-icon-small">
+                            {% if city_weather.condition == 'Ensolarado' %}
+                                <i class="fas fa-sun"></i>
+                            {% elif city_weather.condition == 'Parcialmente Nublado' %}
+                                <i class="fas fa-cloud-sun"></i>
+                            {% elif city_weather.condition == 'Nublado' %}
+                                <i class="fas fa-cloud"></i>
+                            {% elif 'Chuva' in city_weather.condition %}
+                                <i class="fas fa-cloud-rain"></i>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="weather-details">
+                        <div class="temperature-display">
+                            <span class="temp-value">{{ city_weather.temperature }}°C</span>
+                            <span class="condition-text">{{ city_weather.condition }}</span>
+                        </div>
+                        
+                        <div class="weather-metrics">
+                            <div class="metric">
+                                <i class="fas fa-tint"></i>
+                                <span>{{ city_weather.humidity }}%</span>
+                            </div>
+                            <div class="metric">
+                                <i class="fas fa-wind"></i>
+                                <span>{{ city_weather.wind_speed }} km/h</span>
+                            </div>
+                            <div class="metric">
+                                <i class="fas fa-eye"></i>
+                                <span>{{ city_weather.visibility }}</span>
+                            </div>
+                        </div>
+                        
+                        {% if city_weather.alerts %}
+                        <div class="city-alerts">
+                            {% for alert in city_weather.alerts %}
+                            <span class="alert-badge">{{ alert }}</span>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <div id="routes-tab" class="tab-content">
+        <!-- Route Weather Impact -->
+        <div class="neu-card">
+            <h3 style="margin-bottom: 1.5rem; color: var(--text-primary);">Impacto Climático nas Rotas</h3>
+            <div class="route-filter-controls">
+                <select class="neu-select" id="routeFilter">
+                    <option value="all">Todas as Rotas</option>
+                    <option value="active">Rotas Ativas</option>
+                    <option value="planned">Rotas Planejadas</option>
+                    <option value="affected">Rotas Afetadas</option>
+                </select>
+                <button class="neu-button" onclick="refreshRouteWeather()">
+                    <i class="fas fa-sync-alt"></i> Atualizar
+                </button>
+            </div>
+            
+            <div class="route-weather-analysis">
+                <div class="route-impact-item">
+                    <div class="route-info">
+                        <h4>Curitiba → São Paulo</h4>
+                        <span class="route-status safe">Condições Favoráveis</span>
+                    </div>
+                    <div class="weather-impact">
+                        <div class="impact-metric">
+                            <i class="fas fa-clock"></i>
+                            <span>Tempo Normal: 6h 30min</span>
+                        </div>
+                        <div class="impact-metric">
+                            <i class="fas fa-gas-pump"></i>
+                            <span>Consumo: Normal</span>
+                        </div>
+                        <div class="impact-metric">
+                            <i class="fas fa-thermometer-half"></i>
+                            <span>Temp. Média: 24°C</span>
+                        </div>
+                    </div>
+                    <div class="recommendations">
+                        <span class="recommendation-tag safe">✓ Rota Liberada</span>
+                        <span class="recommendation-tag info">💡 Condições Ideais</span>
+                    </div>
+                    <div class="route-timeline">
+                        <div class="timeline-point">
+                            <span class="time">08:00</span>
+                            <span class="weather">☀️ 22°C</span>
+                        </div>
+                        <div class="timeline-point">
+                            <span class="time">12:00</span>
+                            <span class="weather">⛅ 26°C</span>
+                        </div>
+                        <div class="timeline-point">
+                            <span class="time">16:00</span>
+                            <span class="weather">☀️ 24°C</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="route-impact-item">
+                    <div class="route-info">
+                        <h4>São Paulo → Rio de Janeiro</h4>
+                        <span class="route-status warning">Atenção Requerida</span>
+                    </div>
+                    <div class="weather-impact">
+                        <div class="impact-metric">
+                            <i class="fas fa-clock"></i>
+                            <span>Tempo Estimado: +45min</span>
+                        </div>
+                        <div class="impact-metric">
+                            <i class="fas fa-gas-pump"></i>
+                            <span>Consumo: +8%</span>
+                        </div>
+                        <div class="impact-metric">
+                            <i class="fas fa-cloud-rain"></i>
+                            <span>Chuva: 70% prob.</span>
+                        </div>
+                    </div>
+                    <div class="recommendations">
+                        <span class="recommendation-tag warning">⚠ Chuva Prevista</span>
+                        <span class="recommendation-tag info">💡 Reduzir Velocidade</span>
+                        <span class="recommendation-tag info">🕐 Partir 1h mais cedo</span>
+                    </div>
+                    <div class="route-timeline">
+                        <div class="timeline-point">
+                            <span class="time">08:00</span>
+                            <span class="weather">☀️ 25°C</span>
+                        </div>
+                        <div class="timeline-point">
+                            <span class="time">12:00</span>
+                            <span class="weather">🌧️ 22°C</span>
+                        </div>
+                        <div class="timeline-point">
+                            <span class="time">16:00</span>
+                            <span class="weather">⛈️ 20°C</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="route-impact-item">
+                    <div class="route-info">
+                        <h4>Belo Horizonte → Porto Alegre</h4>
+                        <span class="route-status danger">Condições Adversas</span>
+                    </div>
+                    <div class="weather-impact">
+                        <div class="impact-metric">
+                            <i class="fas fa-clock"></i>
+                            <span>Tempo Estimado: +2h</span>
+                        </div>
+                        <div class="impact-metric">
+                            <i class="fas fa-gas-pump"></i>
+                            <span>Consumo: +15%</span>
+                        </div>
+                        <div class="impact-metric">
+                            <i class="fas fa-wind"></i>
+                            <span>Ventos: 65 km/h</span>
+                        </div>
+                    </div>
+                    <div class="recommendations">
+                        <span class="recommendation-tag danger">🚫 Adiar Viagem</span>
+                        <span class="recommendation-tag info">💡 Aguardar Melhoria</span>
+                        <span class="recommendation-tag warning">⚠ Tempestade Severa</span>
+                    </div>
+                    <div class="route-timeline">
+                        <div class="timeline-point">
+                            <span class="time">08:00</span>
+                            <span class="weather">⛅ 18°C</span>
+                        </div>
+                        <div class="timeline-point">
+                            <span class="time">12:00</span>
+                            <span class="weather">⛈️ 15°C</span>
+                        </div>
+                        <div class="timeline-point">
+                            <span class="time">16:00</span>
+                            <span class="weather">⛈️ 12°C</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Weather-Based Route Optimization -->
+        <div class="neu-card">
+            <h3 style="margin-bottom: 1.5rem; color: var(--text-primary);">Otimização Baseada no Clima</h3>
+            <div class="optimization-suggestions">
+                <div class="suggestion-card">
+                    <i class="fas fa-route"></i>
+                    <h4>Rota Alternativa Sugerida</h4>
+                    <p>SP → RJ via Rodovia dos Tamoios evita área de tempestade</p>
+                    <div class="suggestion-metrics">
+                        <span>+30 min</span>
+                        <span>-25% risco climático</span>
+                    </div>
+                    <button class="neu-button primary">Aplicar Rota</button>
+                </div>
+                
+                <div class="suggestion-card">
+                    <i class="fas fa-clock"></i>
+                    <h4>Ajuste de Horário</h4>
+                    <p>Partir 2h mais tarde evita pico da tempestade</p>
+                    <div class="suggestion-metrics">
+                        <span>-45 min no trajeto</span>
+                        <span>-60% risco climático</span>
+                    </div>
+                    <button class="neu-button primary">Reagendar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="forecast-tab" class="tab-content">
+        <!-- Extended Forecast -->
+        <div class="neu-card">
+            <h3 style="margin-bottom: 1.5rem; color: var(--text-primary);">Previsão Estendida (7 dias)</h3>
+            <div class="forecast-grid">
+                <div class="forecast-day">
+                    <div class="day-header">
+                        <span class="day-name">Hoje</span>
+                        <span class="day-date">15/06</span>
+                    </div>
+                    <div class="day-weather">
+                        <i class="fas fa-sun"></i>
+                        <span class="temp-range">18° / 28°</span>
+                    </div>
+                    <div class="day-details">
+                        <span>Ensolarado</span>
+                        <span>Chuva: 10%</span>
+                    </div>
+                </div>
+                
+                <div class="forecast-day">
+                    <div class="day-header">
+                        <span class="day-name">Amanhã</span>
+                        <span class="day-date">16/06</span>
+                    </div>
+                    <div class="day-weather">
+                        <i class="fas fa-cloud-rain"></i>
+                        <span class="temp-range">15° / 22°</span>
+                    </div>
+                    <div class="day-details">
+                        <span>Chuva Forte</span>
+                        <span>Chuva: 85%</span>
+                    </div>
+                </div>
+                
+                <div class="forecast-day">
+                    <div class="day-header">
+                        <span class="day-name">Quinta</span>
+                        <span class="day-date">17/06</span>
+                    </div>
+                    <div class="day-weather">
+                        <i class="fas fa-cloud-sun"></i>
+                        <span class="temp-range">16° / 25°</span>
+                    </div>
+                    <div class="day-details">
+                        <span>Parcialmente Nublado</span>
+                        <span>Chuva: 30%</span>
+                    </div>
+                </div>
+                
+                <div class="forecast-day">
+                    <div class="day-header">
+                        <span class="day-name">Sexta</span>
+                        <span class="day-date">18/06</span>
+                    </div>
+                    <div class="day-weather">
+                        <i class="fas fa-sun"></i>
+                        <span class="temp-range">19° / 29°</span>
+                    </div>
+                    <div class="day-details">
+                        <span>Ensolarado</span>
+                        <span>Chuva: 5%</span>
+                    </div>
+                </div>
+                
+                <div class="forecast-day">
+                    <div class="day-header">
+                        <span class="day-name">Sábado</span>
+                        <span class="day-date">19/06</span>
+                    </div>
+                    <div class="day-weather">
+                        <i class="fas fa-cloud"></i>
+                        <span class="temp-range">17° / 24°</span>
+                    </div>
+                    <div class="day-details">
+                        <span>Nublado</span>
+                        <span>Chuva: 40%</span>
+                    </div>
+                </div>
+                
+                <div class="forecast-day">
+                    <div class="day-header">
+                        <span class="day-name">Domingo</span>
+                        <span class="day-date">20/06</span>
+                    </div>
+                    <div class="day-weather">
+                        <i class="fas fa-cloud-sun"></i>
+                        <span class="temp-range">18° / 26°</span>
+                    </div>
+                    <div class="day-details">
+                        <span>Parcialmente Nublado</span>
+                        <span>Chuva: 25%</span>
+                    </div>
+                </div>
+                
+                <div class="forecast-day">
+                    <div class="day-header">
+                        <span class="day-name">Segunda</span>
+                        <span class="day-date">21/06</span>
+                    </div>
+                    <div class="day-weather">
+                        <i class="fas fa-sun"></i>
+                        <span class="temp-range">20° / 30°</span>
+                    </div>
+                    <div class="day-details">
+                        <span>Ensolarado</span>
+                        <span>Chuva: 0%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Weekly Planning -->
+        <div class="neu-card">
+            <h3 style="margin-bottom: 1.5rem; color: var(--text-primary);">Planejamento Semanal</h3>
+            <div class="weekly-planning">
+                <div class="planning-summary">
+                    <div class="summary-item">
+                        <i class="fas fa-check-circle"></i>
+                        <span>4 dias com condições ideais</span>
+                    </div>
+                    <div class="summary-item">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <span>2 dias com atenção requerida</span>
+                    </div>
+                    <div class="summary-item">
+                        <i class="fas fa-times-circle"></i>
+                        <span>1 dia não recomendado</span>
+                    </div>
+                </div>
+                
+                <div class="planning-recommendations">
+                    <h4>Recomendações para a Semana</h4>
+                    <ul>
+                        <li>Concentrar viagens longas em Hoje, Quinta, Sexta e Segunda</li>
+                        <li>Evitar partidas na Terça-feira devido à tempestade</li>
+                        <li>Considerar rotas alternativas para Quarta e Sábado</li>
+                        <li>Manter equipes de emergência em standby na Terça</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="analytics-tab" class="tab-content">
+        <!-- Historical Weather Analytics -->
+        <div class="neu-card">
+            <h3 style="margin-bottom: 1.5rem; color: var(--text-primary);">Análise Histórica do Clima</h3>
+            <div class="analytics-controls">
+                <select class="neu-select">
+                    <option>Últimos 30 dias</option>
+                    <option>Últimos 3 meses</option>
+                    <option>Último ano</option>
+                </select>
+                <select class="neu-select">
+                    <option>Todas as regiões</option>
+                    <option>Região Sul</option>
+                    <option>Região Sudeste</option>
+                </select>
+            </div>
+            
+            <div class="analytics-grid">
+                <div class="analytics-chart">
+                    <h4>Impacto Climático nos Custos</h4>
+                    <canvas id="weatherCostChart"></canvas>
+                </div>
+                
+                <div class="analytics-chart">
+                    <h4>Frequência de Eventos Climáticos</h4>
+                    <canvas id="weatherEventsChart"></canvas>
+                </div>
+                
+                <div class="analytics-summary">
+                    <h4>Estatísticas do Período</h4>
+                    <div class="stat-item">
+                        <span class="stat-label">Dias com Chuva</span>
+                        <span class="stat-value">12 dias (40%)</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Atrasos por Clima</span>
+                        <span class="stat-value">8 ocorrências</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Custo Adicional</span>
+                        <span class="stat-value">R$ 15.240</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Rotas Desviadas</span>
+                        <span class="stat-value">23 rotas</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Seasonal Patterns -->
+        <div class="neu-card">
+            <h3 style="margin-bottom: 1.5rem; color: var(--text-primary);">Padrões Sazonais</h3>
+            <div class="seasonal-analysis">
+                <div class="season-card">
+                    <h4>Verão (Dez-Mar)</h4>
+                    <div class="season-stats">
+                        <span>Chuvas: 65% dos dias</span>
+                        <span>Temp. Média: 28°C</span>
+                        <span>Impacto: Alto</span>
+                    </div>
+                </div>
+                <div class="season-card">
+                    <h4>Outono (Mar-Jun)</h4>
+                    <div class="season-stats">
+                        <span>Chuvas: 35% dos dias</span>
+                        <span>Temp. Média: 22°C</span>
+                        <span>Impacto: Baixo</span>
+                    </div>
+                </div>
+                <div class="season-card">
+                    <h4>Inverno (Jun-Set)</h4>
+                    <div class="season-stats">
+                        <span>Chuvas: 20% dos dias</span>
+                        <span>Temp. Média: 16°C</span>
+                        <span>Impacto: Mínimo</span>
+                    </div>
+                </div>
+                <div class="season-card">
+                    <h4>Primavera (Set-Dez)</h4>
+                    <div class="season-stats">
+                        <span>Chuvas: 45% dos dias</span>
+                        <span>Temp. Média: 24°C</span>
+                        <span>Impacto: Moderado</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="alerts-tab" class="tab-content">
+        <!-- Alert Management Center -->
+        <div class="neu-card">
+            <h3 style="margin-bottom: 1.5rem; color: var(--text-primary);">Central de Alertas Meteorológicos</h3>
+            <div class="alert-controls">
+                <button class="neu-button primary" onclick="createCustomAlert()">
+                    <i class="fas fa-plus"></i> Criar Alerta Personalizado
+                </button>
+                <button class="neu-button" onclick="manageNotifications()">
+                    <i class="fas fa-bell"></i> Configurar Notificações
+                </button>
+            </div>
+            
+            <div class="alerts-management">
+                <div class="alert-filters">
+                    <button class="filter-btn active" data-filter="all">Todos</button>
+                    <button class="filter-btn" data-filter="critical">Críticos</button>
+                    <button class="filter-btn" data-filter="warning">Atenção</button>
+                    <button class="filter-btn" data-filter="info">Informativos</button>
+                </div>
+                
+                <div class="alerts-timeline">
+                    <div class="alert-timeline-item critical">
+                        <div class="alert-time">14:30</div>
+                        <div class="alert-content">
+                            <h5>Alerta de Tempestade Severa</h5>
+                            <p>Ventos superiores a 80 km/h detectados na BR-116, km 245-280</p>
+                            <div class="alert-actions">
+                                <button class="action-btn">Notificar Motoristas</button>
+                                <button class="action-btn">Desviar Rotas</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="alert-timeline-item warning">
+                        <div class="alert-time">13:15</div>
+                        <div class="alert-content">
+                            <h5>Chuva Forte Aproximando</h5>
+                            <p>Frente fria se aproxima da região metropolitana de São Paulo</p>
+                            <div class="alert-actions">
+                                <button class="action-btn">Alertar Equipes</button>
+                                <button class="action-btn">Preparar Contingência</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="alert-timeline-item info">
+                        <div class="alert-time">12:00</div>
+                        <div class="alert-content">
+                            <h5>Melhoria nas Condições</h5>
+                            <p>Neblina se dissipando na Serra do Mar, visibilidade melhorando</p>
+                            <div class="alert-actions">
+                                <button class="action-btn">Liberar Rotas</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Automated Response System -->
+        <div class="neu-card">
+            <h3 style="margin-bottom: 1.5rem; color: var(--text-primary);">Sistema de Resposta Automática</h3>
+            <div class="automation-rules">
+                <div class="rule-card">
+                    <div class="rule-header">
+                        <h4>Regra: Tempestade Severa</h4>
+                        <div class="rule-status active">Ativa</div>
+                    </div>
+                    <div class="rule-conditions">
+                        <span>Quando: Ventos > 70 km/h OU Chuva > 50mm/h</span>
+                    </div>
+                    <div class="rule-actions">
+                        <span>Ações: Pausar rotas afetadas + Notificar motoristas + Ativar equipe de emergência</span>
+                    </div>
+                </div>
+                
+                <div class="rule-card">
+                    <div class="rule-header">
+                        <h4>Regra: Neblina Densa</h4>
+                        <div class="rule-status active">Ativa</div>
+                    </div>
+                    <div class="rule-conditions">
+                        <span>Quando: Visibilidade < 200m</span>
+                    </div>
+                    <div class="rule-actions">
+                        <span>Ações: Reduzir velocidade máxima + Aumentar intervalo entre veículos</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Safety Guidelines -->
+    <div class="neu-card">
+        <h3 style="margin-bottom: 1.5rem; color: var(--text-primary);">Diretrizes de Segurança</h3>
+        <div class="safety-guidelines">
+            <div class="guideline-category">
+                <h4><i class="fas fa-cloud-rain"></i> Condições de Chuva</h4>
+                <ul class="guidelines-list">
+                    <li>Reduzir velocidade em 20-30%</li>
+                    <li>Aumentar distância de seguimento para 4-6 segundos</li>
+                    <li>Verificar sistema de freios e pneus antes da viagem</li>
+                    <li>Evitar ultrapassagens desnecessárias</li>
+                    <li>Ligar faróis mesmo durante o dia</li>
+                    <li>Parar em local seguro se a chuva for muito intensa</li>
+                </ul>
+            </div>
+            
+            <div class="guideline-category">
+                <h4><i class="fas fa-smog"></i> Neblina e Baixa Visibilidade</h4>
+                <ul class="guidelines-list">
+                    <li>Usar faróis baixos e pisca-alerta</li>
+                    <li>Reduzir velocidade significativamente (máx. 40 km/h)</li>
+                    <li>Manter distância segura aumentada (8-10 segundos)</li>
+                    <li>Evitar mudanças bruscas de faixa</li>
+                    <li>Usar faixa da direita sempre que possível</li>
+                    <li>Considerar parada em local seguro se visibilidade < 50m</li>
+                </ul>
+            </div>
+            
+            <div class="guideline-category">
+                <h4><i class="fas fa-wind"></i> Ventos Fortes</h4>
+                <ul class="guidelines-list">
+                    <li>Reduzir velocidade em trechos expostos</li>
+                    <li>Manter controle firme do volante com ambas as mãos</li>
+                    <li>Atenção especial em pontes, viadutos e áreas abertas</li>
+                    <li>Evitar ultrapassagens de veículos altos</li>
+                    <li>Verificar amarração da carga regularmente</li>
+                    <li>Considerar parada se ventos > 80 km/h</li>
+                </ul>
+            </div>
+            
+            <div class="guideline-category">
+                <h4><i class="fas fa-thermometer-half"></i> Temperaturas Extremas</h4>
+                <ul class="guidelines-list">
+                    <li>Verificar sistema de arrefecimento antes da viagem</li>
+                    <li>Monitorar temperatura do motor constantemente</li>
+                    <li>Fazer pausas mais frequentes (a cada 2h)</li>
+                    <li>Verificar pressão dos pneus (ajustar para temperatura)</li>
+                    <li>Manter hidratação adequada do motorista</li>
+                    <li>Carregar água extra e kit de emergência</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+
+/* Added comprehensive styles for enhanced weather features */
+.weather-tabs {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    border-bottom: 2px solid var(--bg-secondary);
+    overflow-x: auto;
+}
+
+.tab-button {
+    padding: 1rem 2rem;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    border-radius: 10px 10px 0 0;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+}
+
+.tab-button.active {
+    background-color: var(--accent-primary);
+    color: white;
+    box-shadow: var(--shadow-raised);
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+.weather-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.last-update {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.weather-trend {
+    margin-top: 0.5rem;
+}
+
+.trend-indicator {
+    font-size: 0.8rem;
+    padding: 0.2rem 0.6rem;
+    border-radius: 10px;
+    background-color: var(--success);
+    color: white;
+}
+
+.alerts-counter {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.alert-count {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 1rem;
+    border-radius: 10px;
+    box-shadow: var(--shadow-pressed);
+}
+
+.alert-count.critical {
+    background-color: rgba(244, 67, 54, 0.1);
+    border: 2px solid var(--danger);
+}
+
+.alert-count.warning {
+    background-color: rgba(255, 193, 7, 0.1);
+    border: 2px solid var(--warning);
+}
+
+.alert-count.info {
+    background-color: rgba(74, 144, 226, 0.1);
+    border: 2px solid var(--accent-primary);
+}
+
+.alert-count .count {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.alert-count .label {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.alert-item.critical {
+    background-color: rgba(244, 67, 54, 0.1);
+    border-left: 4px solid var(--danger);
+}
+
+.alert-time {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    margin-top: 0.5rem;
+}
+
+.weather-map-container {
+    position: relative;
+}
+
+.map-controls {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+}
+
+.map-layer-btn {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 20px;
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: var(--shadow-pressed);
+}
+
+.map-layer-btn.active {
+    background-color: var(--accent-primary);
+    color: white;
+    box-shadow: var(--shadow-raised);
+}
+
+.weather-map {
+    height: 400px;
+    background-color: var(--bg-secondary);
+    border-radius: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    box-shadow: var(--shadow-pressed);
+}
+
+.map-placeholder {
+    text-align: center;
+    color: var(--text-muted);
+}
+
+.map-placeholder i {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    color: var(--accent-primary);
+}
+
+.route-filter-controls {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    align-items: center;
+}
+
+.neu-select {
+    padding: 0.8rem;
+    border: none;
+    border-radius: 10px;
+    background-color: var(--bg-secondary);
+    box-shadow: var(--shadow-pressed);
+    color: var(--text-primary);
+}
+
+.route-timeline {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1rem;
+    padding: 1rem;
+    background-color: var(--bg-secondary);
+    border-radius: 10px;
+    box-shadow: var(--shadow-pressed);
+}
+
+.timeline-point {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    flex: 1;
+}
+
+.timeline-point .time {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.timeline-point .weather {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+
+.optimization-suggestions {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+}
+
+.suggestion-card {
+    padding: 2rem;
+    background-color: var(--bg-primary);
+    border-radius: 15px;
+    box-shadow: var(--shadow-pressed);
+    text-align: center;
+}
+
+.suggestion-card i {
+    font-size: 2.5rem;
+    color: var(--accent-primary);
+    margin-bottom: 1rem;
+}
+
+.suggestion-metrics {
+    display: flex;
+    justify-content: space-around;
+    margin: 1rem 0;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+
+.forecast-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+}
+
+.forecast-day {
+    padding: 1.5rem;
+    background-color: var(--bg-primary);
+    border-radius: 15px;
+    box-shadow: var(--shadow-pressed);
+    text-align: center;
+}
+
+.day-header {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 1rem;
+}
+
+.day-name {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.day-date {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.day-weather {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.day-weather i {
+    font-size: 2rem;
+    color: var(--accent-primary);
+}
+
+.temp-range {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.day-details {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.weekly-planning {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+}
+
+.planning-summary {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.summary-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    background-color: var(--bg-primary);
+    border-radius: 10px;
+    box-shadow: var(--shadow-pressed);
+}
+
+.summary-item i {
+    font-size: 1.2rem;
+}
+
+.summary-item i.fa-check-circle {
+    color: var(--success);
+}
+
+.summary-item i.fa-exclamation-triangle {
+    color: var(--warning);
+}
+
+.summary-item i.fa-times-circle {
+    color: var(--danger);
+}
+
+.planning-recommendations {
+    padding: 1.5rem;
+    background-color: var(--bg-primary);
+    border-radius: 15px;
+    box-shadow: var(--shadow-pressed);
+}
+
+.planning-recommendations ul {
+    list-style: none;
+    padding: 0;
+    margin: 1rem 0 0 0;
+}
+
+.planning-recommendations li {
+    padding: 0.5rem 0;
+    color: var(--text-secondary);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    position: relative;
+    padding-left: 1.5rem;
+}
+
+.planning-recommendations li:before {
+    content: "→";
+    color: var(--accent-primary);
+    font-weight: bold;
+    position: absolute;
+    left: 0;
+}
+
+.analytics-controls {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.analytics-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 300px;
+    gap: 2rem;
+}
+
+.analytics-chart {
+    background-color: var(--bg-primary);
+    padding: 1.5rem;
+    border-radius: 15px;
+    box-shadow: var(--shadow-pressed);
+}
+
+.analytics-summary {
+    background-color: var(--bg-primary);
+    padding: 1.5rem;
+    border-radius: 15px;
+    box-shadow: var(--shadow-pressed);
+}
+
+.stat-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.8rem 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.stat-item:last-child {
+    border-bottom: none;
+}
+
+.stat-label {
+    color: var(--text-muted);
+}
+
+.stat-value {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.seasonal-analysis {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+}
+
+.season-card {
+    padding: 1.5rem;
+    background-color: var(--bg-primary);
+    border-radius: 15px;
+    box-shadow: var(--shadow-pressed);
+    text-align: center;
+}
+
+.season-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: 1rem;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+
+.alert-controls {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.alert-filters {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.filter-btn {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 20px;
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: var(--shadow-pressed);
+}
+
+.filter-btn.active {
+    background-color: var(--accent-primary);
+    color: white;
+    box-shadow: var(--shadow-raised);
+}
+
+.alerts-timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.alert-timeline-item {
+    display: flex;
+    gap: 1.5rem;
+    padding: 1.5rem;
+    border-radius: 15px;
+    box-shadow: var(--shadow-pressed);
+}
+
+.alert-timeline-item.critical {
+    background-color: rgba(244, 67, 54, 0.1);
+    border-left: 4px solid var(--danger);
+}
+
+.alert-timeline-item.warning {
+    background-color: rgba(255, 193, 7, 0.1);
+    border-left: 4px solid var(--warning);
+}
+
+.alert-timeline-item.info {
+    background-color: rgba(74, 144, 226, 0.1);
+    border-left: 4px solid var(--accent-primary);
+}
+
+.alert-time {
+    font-weight: 600;
+    color: var(--text-primary);
+    min-width: 60px;
+}
+
+.alert-content {
+    flex: 1;
+}
+
+.alert-content h5 {
+    color: var(--text-primary);
+    margin: 0 0 0.5rem 0;
+}
+
+.alert-content p {
+    color: var(--text-muted);
+    margin: 0 0 1rem 0;
+}
+
+.alert-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.action-btn {
+    padding: 0.3rem 0.8rem;
+    border: none;
+    border-radius: 15px;
+    background-color: var(--accent-primary);
+    color: white;
+    cursor: pointer;
+    font-size: 0.8rem;
+    box-shadow: var(--shadow-raised);
+}
+
+.automation-rules {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.rule-card {
+    padding: 1.5rem;
+    background-color: var(--bg-primary);
+    border-radius: 15px;
+    box-shadow: var(--shadow-pressed);
+}
+
+.rule-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.rule-status {
+    padding: 0.3rem 0.8rem;
+    border-radius: 15px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.rule-status.active {
+    background-color: var(--success);
+    color: white;
+}
+
+.rule-conditions, .rule-actions {
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+
+@media (max-width: 768px) {
+    .weather-overview {
+        grid-template-columns: 1fr;
+    }
+    
+    .weather-impact {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .analytics-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .weekly-planning {
+        grid-template-columns: 1fr;
+    }
+    
+    .weather-tabs {
+        flex-wrap: wrap;
+    }
+}
+
+.weather-overview {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+
+.current-weather {
+    padding: 2rem;
+}
+
+.current-conditions {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+}
+
+.weather-icon {
+    font-size: 4rem;
+    color: #ffa500;
+}
+
+.weather-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.temperature {
+    font-size: 3rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.condition {
+    font-size: 1.2rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.5rem;
+}
+
+.details {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+
+.weather-alerts {
+    padding: 2rem;
+}
+
+.alerts-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.alert-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    border-radius: 12px;
+    box-shadow: var(--shadow-pressed);
+}
+
+.alert-item.warning {
+    background-color: rgba(255, 193, 7, 0.1);
+    border-left: 4px solid var(--warning);
+}
+
+.alert-item.info {
+    background-color: rgba(74, 144, 226, 0.1);
+    border-left: 4px solid var(--accent-primary);
+}
+
+.alert-item i {
+    font-size: 1.5rem;
+}
+
+.alert-item.warning i {
+    color: var(--warning);
+}
+
+.alert-item.info i {
+    color: var(--accent-primary);
+}
+
+.alert-title {
+    display: block;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.alert-description {
+    display: block;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+
+.cities-weather-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+}
+
+.city-weather-card {
+    padding: 1.5rem;
+    background-color: var(--bg-primary);
+    border-radius: 15px;
+    box-shadow: var(--shadow-pressed);
+}
+
+.city-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.city-header h4 {
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.weather-icon-small {
+    font-size: 1.5rem;
+    color: var(--accent-primary);
+}
+
+.temperature-display {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 1rem;
+}
+
+.temp-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.condition-text {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+
+.weather-metrics {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+}
+
+.weather-metrics .metric {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.weather-metrics .metric i {
+    color: var(--accent-secondary);
+}
+
+.city-alerts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.alert-badge {
+    padding: 0.2rem 0.6rem;
+    background-color: var(--warning);
+    color: var(--text-primary);
+    border-radius: 10px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    box-shadow: var(--shadow-raised);
+}
+
+.route-weather-analysis {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.route-impact-item {
+    padding: 1.5rem;
+    background-color: var(--bg-primary);
+    border-radius: 15px;
+    box-shadow: var(--shadow-pressed);
+}
+
+.route-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.route-info h4 {
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.route-status {
+    padding: 0.3rem 0.8rem;
+    border-radius: 15px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    box-shadow: var(--shadow-raised);
+}
+
+.route-status.safe {
+    background-color: var(--success);
+    color: white;
+}
+
+.route-status.warning {
+    background-color: var(--warning);
+    color: var(--text-primary);
+}
+
+.route-status.danger {
+    background-color: var(--danger);
+    color: white;
+}
+
+.weather-impact {
+    display: flex;
+    gap: 2rem;
+    margin-bottom: 1rem;
+}
+
+.impact-metric {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.impact-metric i {
+    color: var(--accent-secondary);
+}
+
+.recommendations {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.recommendation-tag {
+    padding: 0.3rem 0.8rem;
+    border-radius: 15px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    box-shadow: var(--shadow-raised);
+}
+
+.recommendation-tag.safe {
+    background-color: var(--success);
+    color: white;
+}
+
+.recommendation-tag.warning {
+    background-color: var(--warning);
+    color: var(--text-primary);
+}
+
+.recommendation-tag.danger {
+    background-color: var(--danger);
+    color: white;
+}
+
+.recommendation-tag.info {
+    background-color: var(--accent-primary);
+    color: white;
+}
+
+.safety-guidelines {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+}
+
+.guideline-category {
+    padding: 1.5rem;
+    background-color: var(--bg-primary);
+    border-radius: 15px;
+    box-shadow: var(--shadow-pressed);
+}
+
+.guideline-category h4 {
+    color: var(--text-primary);
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.guideline-category h4 i {
+    color: var(--accent-primary);
+}
+
+.guidelines-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.guidelines-list li {
+    padding: 0.5rem 0;
+    color: var(--text-secondary);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    position: relative;
+    padding-left: 1.5rem;
+}
+
+.guidelines-list li:before {
+    content: "•";
+    color: var(--accent-primary);
+    font-weight: bold;
+    position: absolute;
+    left: 0;
+}
+
+.guidelines-list li:last-child {
+    border-bottom: none;
+}
+</style>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+function showWeatherTab(tabName) {
+    // Hide all tabs
+    document.querySelectorAll('.tab-content').forEach(tab => {
+        tab.classList.remove('active');
+    });
+    document.querySelectorAll('.tab-button').forEach(button => {
+        button.classList.remove('active');
+    });
+    
+    // Show selected tab
+    document.getElementById(tabName + '-tab').classList.add('active');
+    event.target.classList.add('active');
+    
+    // Initialize charts for specific tabs
+    if (tabName === 'analytics') {
+        setTimeout(() => {
+            initializeWeatherCharts();
+        }, 100);
+    }
+}
+
+function refreshRouteWeather() {
+    console.log('Refreshing route weather data...');
+    // Implementation for refreshing route weather data
+}
+
+function createCustomAlert() {
+    console.log('Creating custom weather alert...');
+    // Implementation for creating custom alerts
+}
+
+function manageNotifications() {
+    console.log('Managing notification settings...');
+    // Implementation for notification management
+}
+
+function initializeWeatherCharts() {
+    // Weather Cost Impact Chart
+    const costCtx = document.getElementById('weatherCostChart');
+    if (costCtx) {
+        new Chart(costCtx, {
+            type: 'line',
+            data: {
+                labels: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun'],
+                datasets: [{
+                    label: 'Custo Adicional (R$)',
+                    data: [8500, 12000, 6500, 4200, 9800, 15240],
+                    borderColor: '#dc3545',
+                    backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        labels: { color: '#000000' }
+                    }
+                },
+                scales: {
+                    y: { ticks: { color: '#000000' } },
+                    x: { ticks: { color: '#000000' } }
+                }
+            }
+        });
+    }
+
+    // Weather Events Chart
+    const eventsCtx = document.getElementById('weatherEventsChart');
+    if (eventsCtx) {
+        new Chart(eventsCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Chuva Forte', 'Neblina', 'Ventos Fortes', 'Tempestades', 'Granizo'],
+                datasets: [{
+                    label: 'Ocorrências',
+                    data: [12, 8, 5, 3, 1],
+                    backgroundColor: ['#4a90e2', '#7bb3f0', '#28a745', '#ffc107', '#dc3545']
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        labels: { color: '#000000' }
+                    }
+                },
+                scales: {
+                    y: { ticks: { color: '#000000' } },
+                    x: { ticks: { color: '#000000' } }
+                }
+            }
+        });
+    }
+}
+
+// Auto-refresh weather data every 5 minutes
+setInterval(() => {
+    console.log('Auto-refreshing weather data...');
+    // Implementation for auto-refresh
+}, 300000);
+
+// Map layer switching
+document.addEventListener('DOMContentLoaded', function() {
+    const layerButtons = document.querySelectorAll('.map-layer-btn');
+    layerButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            layerButtons.forEach(btn => btn.classList.remove('active'));
+            this.classList.add('active');
+            
+            const layer = this.dataset.layer;
+            console.log(`Switching to ${layer} layer`);
+            // Implementation for layer switching
+        });
+    });
+
+    // Alert filter functionality
+    const filterButtons = document.querySelectorAll('.filter-btn');
+    filterButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            filterButtons.forEach(btn => btn.classList.remove('active'));
+            this.classList.add('active');
+            
+            const filter = this.dataset.filter;
+            console.log(`Filtering alerts by ${filter}`);
+            // Implementation for alert filtering
+        });
+    });
+});
+
+// Weather-based route recommendations
+function updateRouteRecommendations() {
+    console.log('Updating route recommendations based on weather conditions');
+    // Implementation for dynamic route recommendations
+}
+
+// Real-time weather updates
+function startWeatherUpdates() {
+    setInterval(() => {
+        // Simulate real-time weather updates
+        updateWeatherDisplay();
+    }, 60000); // Update every minute
+}
+
+function updateWeatherDisplay() {
+    // Implementation for updating weather display with real-time data
+    console.log('Updating weather display with latest data');
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    updateRouteRecommendations();
+    startWeatherUpdates();
+});
+</script>
+{% endblock %}

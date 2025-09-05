@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Wise Routes - Planejamento Logístico{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <h2 class="logo">Wise Routes</h2>
+                <p class="tagline">Planejamento Logístico Inteligente</p>
+            </div>
+            
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a href="/" class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}">
+                        <i class="fas fa-tachometer-alt"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/map" class="nav-link {% if request.endpoint == 'map_view' %}active{% endif %}">
+                        <i class="fas fa-map-marked-alt"></i>
+                        <span>Mapa Interativo</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/drivers" class="nav-link {% if request.endpoint == 'drivers' %}active{% endif %}">
+                        <i class="fas fa-users"></i>
+                        <span>Motoristas</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/vehicles" class="nav-link {% if request.endpoint == 'vehicles' %}active{% endif %}">
+                        <i class="fas fa-truck"></i>
+                        <span>Veículos</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/costs" class="nav-link {% if request.endpoint == 'costs' %}active{% endif %}">
+                        <i class="fas fa-chart-line"></i>
+                        <span>Análise de Custos</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/weather" class="nav-link {% if request.endpoint == 'weather' %}active{% endif %}">
+                        <i class="fas fa-cloud-sun"></i>
+                        <span>Clima</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/reports" class="nav-link {% if request.endpoint == 'reports' %}active{% endif %}">
+                        <i class="fas fa-file-alt"></i>
+                        <span>Relatórios</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="top-header">
+                <h1 class="page-title">{% block page_title %}Dashboard{% endblock %}</h1>
+                <div class="header-actions">
+                    <div class="datetime">
+                        <span id="current-datetime"></span>
+                    </div>
+                </div>
+            </header>
+            
+            <div class="content-area">
+                {% block content %}{% endblock %}
+            </div>
+        </main>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>
