@@ -54,24 +54,6 @@ Wise Routes é uma aplicação web desenvolvida em Python/Flask para planejament
    \`\`\`
 4. Acesse http://localhost:5000
 
-## Estrutura do Projeto
-
-\`\`\`
-wise-routes/
-├── app.py                 # Aplicação principal Flask
-├── data/
-│   └── synthetic_data.py  # Dados sintéticos (facilmente substituíveis)
-├── static/
-│   ├── css/
-│   │   └── style.css     # Estilos neumórficos
-│   └── js/
-│       └── main.js       # JavaScript principal
-├── templates/
-│   ├── base.html         # Template base
-│   └── dashboard.html    # Dashboard principal
-└── requirements.txt      # Dependências Python
-\`\`\`
-
 ## Dados Sintéticos
 
 O sistema utiliza dados sintéticos que podem ser facilmente substituídos por dados reais:
